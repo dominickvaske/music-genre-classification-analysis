@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Genre Classification Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #666;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .authors {
+            margin-top: 1rem;
+            font-style: italic;
+            color: #888;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            margin-bottom: 2rem;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .section h2 {
+            color: #4a5568;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+            position: relative;
+            padding-bottom: 0.5rem;
+        }
+
+        .section h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 2rem 0;
+        }
+
+        .methodology-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .step {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .step::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.6s;
+            opacity: 0;
+        }
+
+        .step:hover::before {
+            opacity: 1;
+            animation: shine 0.6s ease-in-out;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .step-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .confusion-matrix {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .matrix-table th,
+        .matrix-table td {
+            padding: 0.8rem;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        .matrix-table th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+
+        .matrix-diagonal {
+            background: #4ade80 !important;
+            color: white;
+            font-weight: bold;
+        }
+
+        .matrix-error {
+            background: #f87171 !important;
+            color: white;
+        }
+
+        .genre-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .genre-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .genre-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .genre-description {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            padding: 3rem 2rem;
+            border-radius: 15px;
+            margin-top: 3rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #667eea;
+            padding: 1rem 2rem;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            margin: 0.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .highlight {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .section {
+                padding: 1.5rem;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Music Genre Classification</h1>
+            <p>Using Principal Component Analysis Combined with K-Nearest Neighbors and Logistic Regression</p>
+            <div class="authors">Amanda Li, Chris Hyorok Lee, Dominick Vaske</div>
+        </div>
+
+        <!-- Overview Section -->
+        <div class="section">
+            <h2>Project Overview</h2>
+            <p>This project explores music genre classification using machine learning techniques applied to Spotify audio features. By combining <span class="highlight">Principal Component Analysis (PCA)</span> with <span class="highlight">K-Nearest Neighbors</span> and <span class="highlight">Logistic Regression</span>, we achieved impressive classification accuracies on five distinct musical genres.</p>
+            
+            <div class="grid">
+                <div class="metric">
+                    <div class="metric-value">500</div>
+                    <div class="metric-label">Songs Analyzed</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">5</div>
+                    <div class="metric-label">Music Genres</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">91%</div>
+                    <div class="metric-label">Variance Captured</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">90%</div>
+                    <div class="metric-label">Best Accuracy</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Genres Section -->
+        <div class="section">
+            <h2>Musical Genres Studied</h2>
+            <p>We analyzed five distinct genres, each with unique audio characteristics that make them suitable for classification:</p>
+            
+            <div class="genre-features">
+                <div class="genre-card">
+                    <div class="genre-name">Heavy Metal</div>
+                    <div class="genre-description">Highest energy, high tempo and loudness</div>
+                </div>
+                <div class="genre-card">
+                    <div class="genre-name">Latino Pop</div>
+                    <div class="genre-description">Highest valence (positiveness) and danceability</div>
+                </div>
+                <div class="genre-card">
+                    <div class="genre-name">Neo Soul</div>
+                    <div class="genre-description">Balanced features, moderate danceability</div>
+                </div>
+                <div class="genre-card">
+                    <div class="genre-name">Punk Pop</div>
+                    <div class="genre-description">High energy, similar to heavy metal</div>
+                </div>
+                <div class="genre-card">
+                    <div class="genre-name">Study Music</div>
+                    <div class="genre-description">Highest acousticness and instrumentalness</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Methodology Section -->
+        <div class="section">
+            <h2>Methodology</h2>
+            <p>Our approach combined dimensionality reduction with supervised learning techniques:</p>
+            
+            <div class="methodology-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Data Collection</h3>
+                    <p>Gathered 100 songs per genre using Spotify Web API</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Feature Extraction</h3>
+                    <p>Extracted 12 audio features including energy, danceability, and valence</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Data Preprocessing</h3>
+                    <p>Standardized features and removed irrelevant variables</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>PCA Reduction</h3>
+                    <p>Reduced dimensions from 10 to 6 while retaining 91% variance</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <h3>Model Training</h3>
+                    <p>Trained KNN (k=7) and Logistic Regression classifiers</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">6</div>
+                    <h3>Evaluation</h3>
+                    <p>Cross-validation and confusion matrix analysis</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PCA Results -->
+        <div class="section">
+            <h2>Principal Component Analysis Results</h2>
+            <p>PCA effectively reduced our dataset dimensionality while preserving most of the variance:</p>
+            
+            <div class="chart-container">
+                <canvas id="pcaChart"></canvas>
+            </div>
+            
+            <div class="card">
+                <p><strong>Key Finding:</strong> The first 6 principal components captured <span class="highlight">91.3%</span> of the total variance, allowing us to reduce computational complexity while maintaining predictive power. The relatively low variance in the first component (40.21%) indicates that our audio features are not highly correlated, which is beneficial for classification.</p>
+            </div>
+        </div>
+
+        <!-- Model Performance -->
+        <div class="section">
+            <h2>Model Performance</h2>
+            <div class="results-grid">
+                <div class="card">
+                    <h3>Overall Accuracy</h3>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="accuracyChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h3>K-Value Optimization</h3>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="kValueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confusion Matrices -->
+        <div class="section">
+            <h2>Classification Results</h2>
+            <div class="results-grid">
+                <div class="confusion-matrix">
+                    <h3>KNN Confusion Matrix (89% Accuracy)</h3>
+                    <table class="matrix-table">
+                        <tr>
+                            <th></th>
+                            <th>Heavy Metal</th>
+                            <th>Latino Pop</th>
+                            <th>Neo Soul</th>
+                            <th>Punk Pop</th>
+                            <th>Study Music</th>
+                        </tr>
+                        <tr>
+                            <th>Heavy Metal</th>
+                            <td class="matrix-diagonal">25</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">1</td>
+                            <td class="matrix-error">2</td>
+                            <td class="matrix-error">0</td>
+                        </tr>
+                        <tr>
+                            <th>Latino Pop</th>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-diagonal">11</td>
+                            <td class="matrix-error">3</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                        </tr>
+                        <tr>
+                            <th>Neo Soul</th>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">1</td>
+                            <td class="matrix-diagonal">9</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                        </tr>
+                        <tr>
+                            <th>Punk Pop</th>
+                            <td class="matrix-error">4</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-diagonal">20</td>
+                            <td class="matrix-error">0</td>
+                        </tr>
+                        <tr>
+                            <th>Study Music</th>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-diagonal">24</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="confusion-matrix">
+                    <h3>Logistic Regression Matrix (90% Accuracy)</h3>
+                    <table class="matrix-table">
+                        <tr>
+                            <th></th>
+                            <th>Heavy Metal</th>
+                            <th>Latino Pop</th>
+                            <th>Neo Soul</th>
+                            <th>Punk Pop</th>
+                            <th>Study Music</th>
+                        </tr>
+                        <tr>
+                            <th>Heavy Metal</th>
+                            <td class="matrix-diagonal">25</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">2</td>
+                            <td class="matrix-error">1</td>
+                            <td class="matrix-error">0</td>
+                        </tr>
+                        <tr>
+                            <th>Latino Pop</th>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-diagonal">12</td>
+                            <td class="matrix-error">2</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                        </tr>
+                        <tr>
+                            <th>Neo Soul</th>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">1</td>
+                            <td class="matrix-diagonal">9</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                        </tr>
+                        <tr>
+                            <th>Punk Pop</th>
+                            <td class="matrix-error">2</td>
+                            <td class="matrix-error">2</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-diagonal">20</td>
+                            <td class="matrix-error">0</td>
+                        </tr>
+                        <tr>
+                            <th>Study Music</th>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-error">0</td>
+                            <td class="matrix-diagonal">24</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Insights -->
+        <div class="section">
+            <h2>Key Insights</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>🎯 Perfect Classification</h3>
+                    <p><strong>Study Music</strong> achieved 100% accuracy in both models due to its distinct instrumental characteristics and high acousticness values.</p>
+                </div>
+                <div class="card">
+                    <h3>🔄 Genre Confusion</h3>
+                    <p><strong>Heavy Metal</strong> and <strong>Punk Pop</strong> showed some confusion due to similar instrumentation, loudness, and tempo characteristics.</p>
+                </div>
+                <div class="card">
+                    <h3>📊 Model Comparison</h3>
+                    <p><strong>Logistic Regression</strong> slightly outperformed KNN (90% vs 89%) with better handling of multi-class boundaries.</p>
+                </div>
+                <div class="card">
+                    <h3>🎵 Feature Importance</h3>
+                    <p><strong>Energy</strong>, <strong>Acousticness</strong>, and <strong>Instrumentalness</strong> were the most distinguishing features across genres.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Implementation -->
+        <div class="section">
+            <h2>Technical Implementation</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>🔧 Tools & Technologies</h3>
+                    <ul style="text-align: left; margin-top: 1rem;">
+                        <li><strong>Python</strong> - Core programming language</li>
+                        <li><strong>Spotify Web API</strong> - Data collection</li>
+                        <li><strong>Scikit-learn</strong> - Machine learning models</li>
+                        <li><strong>Pandas & NumPy</strong> - Data manipulation</li>
+                        <li><strong>Matplotlib</strong> - Data visualization</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>📈 Model Optimization</h3>
+                    <ul style="text-align: left; margin-top: 1rem;">
+                        <li><strong>Cross-validation</strong> for robust evaluation</li>
+                        <li><strong>Grid search</strong> for optimal k-value (k=7)</li>
+                        <li><strong>Feature standardization</strong> for PCA</li>
+                        <li><strong>One-vs-rest</strong> for multi-class classification</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Future Work -->
+        <div class="section">
+            <h2>Future Improvements</h2>
+            <p>Several enhancements could further improve the classification accuracy:</p>
+            <div class="grid">
+                <div class="card">
+                    <h3>📊 Larger Dataset</h3>
+                    <p>Increasing the number of songs per genre could improve model generalization and reduce overfitting, especially for underperforming genres like Neo Soul.</p>
+                </div>
+                <div class="card">
+                    <h3>🧠 Advanced Models</h3>
+                    <p>Implementing deep learning approaches like CNNs, RNNs, or LSTMs could capture more complex patterns in audio features.</p>
+                </div>
+                <div class="card">
+                    <h3>🎵 Additional Features</h3>
+                    <p>Including rhythm patterns, temporal dynamics, and artist metadata could provide richer feature representations.</p>
+                </div>
+                <div class="card">
+                    <h3>⚡ Real-time Classification</h3>
+                    <p>Developing a web application for real-time genre prediction would demonstrate practical applications of the model.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="cta-section">
+            <h2>Explore the Implementation</h2>
+            <p>Dive deeper into the technical details and see the code in action</p>
+            <a href="https://colab.research.google.com/drive/1BpFiM1VGqpDYLSr87WSLD-YzIsstZUpK?usp=sharing" class="cta-button" target="_blank">View Google Colab</a>
+            <a href="#" class="cta-button">GitHub Repository</a>
+            <a href="#" class="cta-button">Download Paper (PDF)</a>
+        </div>
+    </div>
+
+    <script>
+        // PCA Variance Chart
+        const pcaCtx = document.getElementById('pcaChart').getContext('2d');
+        new Chart(pcaCtx, {
+            type: 'bar',
+            data: {
+                labels: ['PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8', 'PC9', 'PC10'],
+                datasets: [{
+                    label: 'Variance Explained (%)',
+                    data: [40.21, 14.71, 12.77, 9.59, 8.63, 5.35, 3.60, 3.00, 1.48, 0.64],
+                    backgroundColor: [
+                        '#667eea', '#667eea', '#667eea', '#667eea', '#667eea', '#667eea',
+                        '#e2e8f0', '#e2e8f0', '#e2e8f0', '#e2e8f0'
+                    ],
+                    borderColor: '#4a5568',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Variance Explained (%)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Principal Components'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Model Accuracy Comparison Chart
+        const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
+        new Chart(accuracyCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['KNN Accuracy', 'Logistic Regression'],
+                datasets: [{
+                    data: [89, 90],
+                    backgroundColor: ['#667eea', '#764ba2'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+
+        // K-Value Optimization Chart
+        const kValueCtx = document.getElementById('kValueChart').getContext('2d');
+        new Chart(kValueCtx, {
+            type: 'line',
+            data: {
+                labels: [1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
+                datasets: [{
+                    label: 'Accuracy',
+                    data: [0.83, 0.87, 0.89, 0.92, 0.90, 0.89, 0.87, 0.87, 0.85, 0.87],
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        min: 0.8,
+                        max: 0.95,
+                        title: {
+                            display: true,
+                            text: 'Accuracy'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'K Value'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
